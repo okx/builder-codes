@@ -30,6 +30,8 @@ contract BuilderCodes is
     /// @notice EIP-712 storage structure for registry data
     /// @custom:storage-location erc7201:base.BuilderCodes
     struct RegistryStorage {
+        /// @dev Whether the REGISTER_ROLE check is enforced on register()
+        bool registerRoleEnabled;
         /// @dev Base URI for builder code metadata
         string uriPrefix;
         /// @dev Mapping of builder code token IDs to payout recipients
@@ -80,6 +82,11 @@ contract BuilderCodes is
     /// @param tokenId Token ID of the builder code
     /// @param payoutAddress New payout address
     event PayoutAddressUpdated(uint256 indexed tokenId, address payoutAddress);
+
+    /// @notice Emitted when the REGISTER_ROLE enforcement is toggled
+    ///
+    /// @param enabled True if REGISTER_ROLE is now enforced
+    event RegisterRoleToggled(bool enabled);
 
     ////////////////////////////////////////////////////////////////
     ///                          Errors                          ///
@@ -138,16 +145,31 @@ contract BuilderCodes is
 
     /// @notice Registers a new builder code in the system with a custom value
     ///
-    /// @dev Requires sender has REGISTER_ROLE
+    /// @dev When registerRoleEnabled is true, requires sender has REGISTER_ROLE; otherwise open to anyone
     ///
     /// @param code Custom builder code for the builder code
     /// @param initialOwner Owner of the builder code
     /// @param initialPayoutAddress Default payout address
-    function register(string memory code, address initialOwner, address initialPayoutAddress)
-        external
-        onlyRole(REGISTER_ROLE)
-    {
+    function register(string memory code, address initialOwner, address initialPayoutAddress) external {
+        if (_getRegistryStorage().registerRoleEnabled) _checkRole(REGISTER_ROLE, msg.sender);
         _register(code, initialOwner, initialPayoutAddress);
+    }
+
+    /// @notice Enables or disables the REGISTER_ROLE check on register()
+    ///
+    /// @dev Requires sender is owner
+    ///
+    /// @param enabled True to enforce REGISTER_ROLE, false to allow anyone
+    function setRegisterRoleEnabled(bool enabled) external onlyOwner {
+        _getRegistryStorage().registerRoleEnabled = enabled;
+        emit RegisterRoleToggled(enabled);
+    }
+
+    /// @notice Returns whether the REGISTER_ROLE check is currently enforced on register()
+    ///
+    /// @return enabled True if REGISTER_ROLE is enforced
+    function isRegisterRoleEnabled() external view returns (bool) {
+        return _getRegistryStorage().registerRoleEnabled;
     }
 
     /// @notice Registers a new builder code in the system with a signature

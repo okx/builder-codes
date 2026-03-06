@@ -2,6 +2,7 @@
 pragma solidity ^0.8.29;
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 import {BuilderCodes} from "../../../src/BuilderCodes.sol";
@@ -10,7 +11,7 @@ import {BuilderCodesTest, IERC721Errors} from "../../lib/BuilderCodesTest.sol";
 
 /// @notice Unit tests for BuilderCodes.register
 contract RegisterTest is BuilderCodesTest {
-    /// @notice Test that register reverts when sender doesn't have required role
+    /// @notice Test that register reverts when sender doesn't have required role and the role check is enabled
     ///
     /// @param sender The sender address
     /// @param codeSeed The seed for generating the code
@@ -27,6 +28,10 @@ contract RegisterTest is BuilderCodesTest {
         payoutAddress = _boundNonZeroAddress(payoutAddress);
         vm.assume(sender != owner && sender != registrar);
 
+        // Enable the role check first
+        vm.prank(owner);
+        builderCodes.setRegisterRoleEnabled(true);
+
         string memory code = _generateValidCode(codeSeed);
 
         vm.startPrank(sender);
@@ -36,6 +41,95 @@ contract RegisterTest is BuilderCodesTest {
             )
         );
         builderCodes.register(code, initialOwner, payoutAddress);
+    }
+
+    /// @notice Test that register succeeds for any sender when the role check is disabled (default)
+    ///
+    /// @param sender The sender address
+    /// @param codeSeed The seed for generating the code
+    /// @param initialOwner The initial owner address
+    /// @param payoutAddress The payout address
+    function test_register_success_anyoneCanRegisterWhenRoleDisabled(
+        address sender,
+        uint256 codeSeed,
+        address initialOwner,
+        address payoutAddress
+    ) public {
+        sender = _boundNonZeroAddress(sender);
+        initialOwner = _boundNonZeroAddress(initialOwner);
+        payoutAddress = _boundNonZeroAddress(payoutAddress);
+        vm.assume(sender != owner && sender != registrar);
+
+        // Role check is disabled by default
+        assertFalse(builderCodes.isRegisterRoleEnabled());
+
+        string memory code = _generateValidCode(codeSeed);
+        uint256 tokenId = builderCodes.toTokenId(code);
+
+        vm.prank(sender);
+        builderCodes.register(code, initialOwner, payoutAddress);
+
+        assertEq(builderCodes.ownerOf(tokenId), initialOwner);
+    }
+
+    /// @notice Test that setRegisterRoleEnabled reverts when called by non-owner
+    ///
+    /// @param caller The non-owner caller
+    function test_register_setRegisterRoleEnabled_revert_notOwner(address caller) public {
+        caller = _boundNonZeroAddress(caller);
+        vm.assume(caller != owner);
+
+        vm.prank(caller);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, caller));
+        builderCodes.setRegisterRoleEnabled(true);
+    }
+
+    /// @notice Test that setRegisterRoleEnabled emits RegisterRoleToggled event
+    ///
+    /// @param enabled The new enabled state
+    function test_register_setRegisterRoleEnabled_emitsEvent(bool enabled) public {
+        vm.prank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit BuilderCodes.RegisterRoleToggled(enabled);
+        builderCodes.setRegisterRoleEnabled(enabled);
+    }
+
+    /// @notice Test that setRegisterRoleEnabled correctly updates isRegisterRoleEnabled
+    function test_register_setRegisterRoleEnabled_updatesState() public {
+        assertFalse(builderCodes.isRegisterRoleEnabled());
+
+        vm.prank(owner);
+        builderCodes.setRegisterRoleEnabled(true);
+        assertTrue(builderCodes.isRegisterRoleEnabled());
+
+        vm.prank(owner);
+        builderCodes.setRegisterRoleEnabled(false);
+        assertFalse(builderCodes.isRegisterRoleEnabled());
+    }
+
+    /// @notice Test that register succeeds for registrar when role check is enabled
+    ///
+    /// @param codeSeed The seed for generating the code
+    /// @param initialOwner The initial owner address
+    /// @param payoutAddress The payout address
+    function test_register_success_registrarCanRegisterWhenRoleEnabled(
+        uint256 codeSeed,
+        address initialOwner,
+        address payoutAddress
+    ) public {
+        initialOwner = _boundNonZeroAddress(initialOwner);
+        payoutAddress = _boundNonZeroAddress(payoutAddress);
+
+        vm.prank(owner);
+        builderCodes.setRegisterRoleEnabled(true);
+
+        string memory code = _generateValidCode(codeSeed);
+        uint256 tokenId = builderCodes.toTokenId(code);
+
+        vm.prank(registrar);
+        builderCodes.register(code, initialOwner, payoutAddress);
+
+        assertEq(builderCodes.ownerOf(tokenId), initialOwner);
     }
 
     /// @notice Test that register reverts when attempting to register an empty code
