@@ -38,7 +38,7 @@ contract IsValidCodeTest is BuilderCodesTest {
     function test_isValidCode_true_singleCharacter() public view {
         assertTrue(builderCodes.isValidCode("a"));
         assertTrue(builderCodes.isValidCode("0"));
-        assertTrue(builderCodes.isValidCode("_"));
+        assertFalse(builderCodes.isValidCode("_"));
     }
 
     /// @notice Test that isValidCode returns true for 32 character valid code
@@ -47,10 +47,10 @@ contract IsValidCodeTest is BuilderCodesTest {
         assertTrue(builderCodes.isValidCode(code32));
     }
 
-    /// @notice Test that isValidCode returns true for code with underscores
-    function test_isValidCode_true_underscores() public view {
-        assertTrue(builderCodes.isValidCode("test_code"));
-        assertTrue(builderCodes.isValidCode("_underscore_"));
+    /// @notice Test that isValidCode returns false for code with underscores
+    function test_isValidCode_false_underscores() public view {
+        assertFalse(builderCodes.isValidCode("test_code"));
+        assertFalse(builderCodes.isValidCode("_underscore_"));
     }
 
     /// @notice Test that isValidCode returns true for numeric only code

@@ -52,14 +52,14 @@ contract BuilderCodes is
     uint256 public constant MAX_CODE_GENERATION_ATTEMPTS = 50;
 
     /// @notice Length of auto-generated builder codes
-    uint8 public constant GENERATED_CODE_LENGTH = 12;
+    uint8 public constant GENERATED_CODE_LENGTH = 16;
 
     /// @notice Allowed characters for builder codes
-    string public constant ALLOWED_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyz_";
+    string public constant ALLOWED_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyz";
 
     /// @notice Allowed characters for builder codes lookup
     /// @dev LibString.to7BitASCIIAllowedLookup(ALLOWED_CHARACTERS)
-    uint128 public constant ALLOWED_CHARACTERS_LOOKUP = 10633823847437083212121898993101832192;
+    uint128 public constant ALLOWED_CHARACTERS_LOOKUP = 10633823807823001954989730196329857024;
 
     /// @notice EIP-1967 storage slot base for registry mapping using ERC-7201
     /// @dev keccak256(abi.encode(uint256(keccak256("base.BuilderCodes")) - 1)) & ~bytes32(uint256(0xff))
@@ -389,7 +389,7 @@ contract BuilderCodes is
         bytes memory allowedChars = bytes(ALLOWED_CHARACTERS);
         bytes memory result = new bytes(GENERATED_CODE_LENGTH);
         for (uint256 i = 0; i < GENERATED_CODE_LENGTH; i++) {
-            result[i] = allowedChars[uint8(hash[i]) % 37];
+            result[i] = allowedChars[uint8(hash[i]) % 36];
         }
         return string(result);
     }
