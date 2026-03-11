@@ -42,11 +42,9 @@ contract UpdateBaseURITest is BuilderCodesTest {
     ///
     /// @param uriPrefix The URI prefix to test
     function test_updateBaseURI_success_tokenURIUpdated(string memory uriPrefix) public {
-        string memory validCode = _generateValidCode(12345);
-
         // Register a code first
         vm.prank(registrar);
-        builderCodes.register(validCode, owner, owner);
+        string memory validCode = builderCodes.register(owner, owner);
 
         uint256 tokenId = builderCodes.toTokenId(validCode);
 
@@ -62,11 +60,9 @@ contract UpdateBaseURITest is BuilderCodesTest {
     ///
     /// @param uriPrefix The URI prefix to test
     function test_updateBaseURI_success_codeURIUpdated(string memory uriPrefix) public {
-        string memory validCode = _generateValidCode(67890);
-
         // Register a code first
         vm.prank(registrar);
-        builderCodes.register(validCode, owner, owner);
+        string memory validCode = builderCodes.register(owner, owner);
 
         vm.prank(owner);
         builderCodes.updateBaseURI(uriPrefix);

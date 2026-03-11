@@ -8,23 +8,20 @@ import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/proxy/utils/UU
 import {ERC721Upgradeable, IERC721} from "openzeppelin-contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {IERC165} from "openzeppelin-contracts/interfaces/IERC165.sol";
 import {IERC4906} from "openzeppelin-contracts/interfaces/IERC4906.sol";
-import {EIP712} from "solady/utils/EIP712.sol";
 import {LibBit} from "solady/utils/LibBit.sol";
 import {LibString} from "solady/utils/LibString.sol";
-import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
 /// @title BuilderCodes
 ///
 /// @notice ERC-721 NFT for builders to register codes to identify their apps
 ///
-/// @author Coinbase (https://github.com/base/builder-codes)
+/// @author Builder Codes
 contract BuilderCodes is
     Initializable,
     ERC721Upgradeable,
     AccessControlUpgradeable,
     Ownable2StepUpgradeable,
     UUPSUpgradeable,
-    EIP712,
     IERC4906
 {
     /// @notice EIP-712 storage structure for registry data
@@ -51,9 +48,11 @@ contract BuilderCodes is
     /// @notice Role identifier for addresses authorized to update metadata for one or all codes
     bytes32 public constant METADATA_ROLE = keccak256("METADATA_ROLE");
 
-    /// @notice EIP-712 typehash for registration
-    bytes32 public constant REGISTRATION_TYPEHASH =
-        keccak256("BuilderCodeRegistration(string code,address initialOwner,address payoutAddress,uint48 deadline)");
+    /// @notice Maximum number of attempts to generate a unique code
+    uint256 public constant MAX_CODE_GENERATION_ATTEMPTS = 50;
+
+    /// @notice Length of auto-generated builder codes
+    uint8 public constant GENERATED_CODE_LENGTH = 12;
 
     /// @notice Allowed characters for builder codes
     string public constant ALLOWED_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyz_";
@@ -101,9 +100,6 @@ contract BuilderCodes is
     /// @notice Thrown when provided address is invalid (usually zero address)
     error ZeroAddress();
 
-    /// @notice Thrown when signed registration deadline has passed
-    error AfterRegistrationDeadline(uint48 deadline);
-
     /// @notice Thrown when builder code is invalid
     error InvalidCode(string code);
 
@@ -112,6 +108,9 @@ contract BuilderCodes is
 
     /// @notice Thrown when builder code is not registered
     error Unregistered(string code);
+
+    /// @notice Thrown when code generation fails after max attempts
+    error CodeGenerationFailed();
 
     /// @notice Thrown when trying to renounce ownership (disabled for security)
     error OwnershipRenunciationDisabled();
@@ -143,15 +142,18 @@ contract BuilderCodes is
         if (initialRegistrar != address(0)) _grantRole(REGISTER_ROLE, initialRegistrar);
     }
 
-    /// @notice Registers a new builder code in the system with a custom value
+    /// @notice Registers a new builder code with an auto-generated code
     ///
+    /// @dev Code is generated on-chain using hash of sender address, block data, and nonce
     /// @dev When registerRoleEnabled is true, requires sender has REGISTER_ROLE; otherwise open to anyone
     ///
-    /// @param code Custom builder code for the builder code
     /// @param initialOwner Owner of the builder code
     /// @param initialPayoutAddress Default payout address
-    function register(string memory code, address initialOwner, address initialPayoutAddress) external {
+    ///
+    /// @return code The auto-generated builder code
+    function register(address initialOwner, address initialPayoutAddress) external returns (string memory code) {
         if (_getRegistryStorage().registerRoleEnabled) _checkRole(REGISTER_ROLE, msg.sender);
+        code = _generateCode(initialOwner, initialPayoutAddress);
         _register(code, initialOwner, initialPayoutAddress);
     }
 
@@ -170,42 +172,6 @@ contract BuilderCodes is
     /// @return enabled True if REGISTER_ROLE is enforced
     function isRegisterRoleEnabled() external view returns (bool) {
         return _getRegistryStorage().registerRoleEnabled;
-    }
-
-    /// @notice Registers a new builder code in the system with a signature
-    ///
-    /// @dev Requires registration deadline has not passed
-    /// @dev Requires valid signature from an address with REGISTER_ROLE
-    ///
-    /// @param code Custom builder code for the builder code
-    /// @param initialOwner Owner of the builder code
-    /// @param initialPayoutAddress Default payout address
-    /// @param deadline Deadline to submit the registration
-    /// @param signer Address of the signer
-    /// @param signature Registration signature
-    function registerWithSignature(
-        string memory code,
-        address initialOwner,
-        address initialPayoutAddress,
-        uint48 deadline,
-        address signer,
-        bytes memory signature
-    ) external {
-        // Check deadline has not passed
-        if (block.timestamp > deadline) revert AfterRegistrationDeadline(deadline);
-
-        // Check signer has role
-        _checkRole(REGISTER_ROLE, signer);
-
-        // Check signature is valid
-        bytes32 structHash = keccak256(
-            abi.encode(REGISTRATION_TYPEHASH, keccak256(bytes(code)), initialOwner, initialPayoutAddress, deadline)
-        );
-        if (!SignatureCheckerLib.isValidSignatureNow(signer, _hashTypedData(structHash), signature)) {
-            revert Unauthorized();
-        }
-
-        _register(code, initialOwner, initialPayoutAddress);
     }
 
     /// @inheritdoc ERC721Upgradeable
@@ -392,6 +358,42 @@ contract BuilderCodes is
     ///                    Internal Functions                    ///
     ////////////////////////////////////////////////////////////////
 
+    /// @notice Generates a unique builder code on-chain
+    ///
+    /// @dev Uses keccak256 of account, block data, and nonce; retries on collision
+    ///
+    /// @param initialOwner Owner address to use as seed
+    /// @param initialPayoutAddress Payout address to use as seed
+    ///
+    /// @return code The generated builder code
+    function _generateCode(address initialOwner, address initialPayoutAddress) internal view returns (string memory) {
+        for (uint256 nonce = 0; nonce < MAX_CODE_GENERATION_ATTEMPTS; nonce++) {
+            bytes32 hash = keccak256(abi.encodePacked(initialOwner, initialPayoutAddress, block.number, block.prevrandao, nonce));
+
+            string memory code = _hashToCode(hash);
+            uint256 tokenId = toTokenId(code);
+            if (_ownerOf(tokenId) == address(0)) {
+                return code;
+            }
+        }
+
+        revert CodeGenerationFailed();
+    }
+
+    /// @notice Converts a hash to a valid builder code string
+    ///
+    /// @param hash The hash to convert
+    ///
+    /// @return code The builder code string
+    function _hashToCode(bytes32 hash) internal pure returns (string memory) {
+        bytes memory allowedChars = bytes(ALLOWED_CHARACTERS);
+        bytes memory result = new bytes(GENERATED_CODE_LENGTH);
+        for (uint256 i = 0; i < GENERATED_CODE_LENGTH; i++) {
+            result[i] = allowedChars[uint8(hash[i]) % 37];
+        }
+        return string(result);
+    }
+
     /// @notice Registers a new builder code
     ///
     /// @param code Builder code
@@ -422,28 +424,6 @@ contract BuilderCodes is
     ///
     /// @param newImplementation Address of new implementation
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
-
-    /// @notice Returns the domain name and version for the builder codes
-    ///
-    /// @return name The domain name for the builder codes
-    /// @return version The version of the builder codes
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "Builder Codes";
-        version = "1";
-    }
-
-    /// @notice Returns if the domain name and version may change
-    ///
-    /// @return res True if the domain name and version may change
-    function _domainNameAndVersionMayChange() internal pure override returns (bool) {
-        return true;
-    }
 
     /// @notice Gets the storage reference for the registry
     ///

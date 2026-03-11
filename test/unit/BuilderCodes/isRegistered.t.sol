@@ -40,22 +40,19 @@ contract IsRegisteredTest is BuilderCodesTest {
 
     /// @notice Test that isRegistered returns true for registered code
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     function test_isRegistered_success_returnsTrueForRegistered(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress
     ) public {
         initialOwner = _boundNonZeroAddress(initialOwner);
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
-        string memory validCode = _generateValidCode(codeSeed);
 
-        // Register the code
+        // Register a code
         vm.prank(registrar);
-        builderCodes.register(validCode, initialOwner, initialPayoutAddress);
+        string memory code = builderCodes.register(initialOwner, initialPayoutAddress);
 
-        assertTrue(builderCodes.isRegistered(validCode));
+        assertTrue(builderCodes.isRegistered(code));
     }
 }

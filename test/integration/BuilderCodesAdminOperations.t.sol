@@ -62,12 +62,9 @@ contract BuilderCodesAdminOperationsTest is BuilderCodesTest {
         vm.stopPrank();
 
         // Verify each registrar can register codes
-
         for (uint256 i = 0; i < newRegistrars.length; i++) {
-            string memory code = string(abi.encodePacked("test", vm.toString(i)));
-
             vm.prank(newRegistrars[i]);
-            builderCodes.register(code, testOwner, testPayoutAddress);
+            string memory code = builderCodes.register(testOwner, testPayoutAddress);
 
             // Verify registration succeeded
             assertTrue(builderCodes.isRegistered(code));
@@ -76,9 +73,8 @@ contract BuilderCodesAdminOperationsTest is BuilderCodesTest {
         }
 
         // Verify original registrar still works
-        string memory originalRegistrarCode = "originalregistrar";
         vm.prank(registrar);
-        builderCodes.register(originalRegistrarCode, testOwner, testPayoutAddress);
+        string memory originalRegistrarCode = builderCodes.register(testOwner, testPayoutAddress);
         assertTrue(builderCodes.isRegistered(originalRegistrarCode));
     }
 
@@ -118,10 +114,8 @@ contract BuilderCodesAdminOperationsTest is BuilderCodesTest {
         assertTrue(builderCodes.hasRole(builderCodes.METADATA_ROLE(), tempMetadataManager));
 
         // Test that temp registrar can register
-        string memory testCode1 = "tempcode1";
-
         vm.prank(tempRegistrar);
-        builderCodes.register(testCode1, testOwner, testPayoutAddress);
+        string memory testCode1 = builderCodes.register(testOwner, testPayoutAddress);
         assertTrue(builderCodes.isRegistered(testCode1));
 
         // Test that temp metadata manager can update metadata
@@ -139,11 +133,13 @@ contract BuilderCodesAdminOperationsTest is BuilderCodesTest {
         assertFalse(builderCodes.hasRole(builderCodes.REGISTER_ROLE(), tempRegistrar));
         assertFalse(builderCodes.hasRole(builderCodes.METADATA_ROLE(), tempMetadataManager));
 
-        // Test that revoked registrar can no longer register
-        string memory testCode2 = "tempcode2";
+        // Test that revoked registrar can no longer register (role check must be enabled)
+        vm.prank(owner);
+        builderCodes.setRegisterRoleEnabled(true);
+
         vm.prank(tempRegistrar);
         vm.expectRevert();
-        builderCodes.register(testCode2, testOwner, testPayoutAddress);
+        builderCodes.register(testOwner, testPayoutAddress);
 
         // Test that revoked metadata manager can no longer update metadata
         vm.prank(tempMetadataManager);
@@ -151,9 +147,8 @@ contract BuilderCodesAdminOperationsTest is BuilderCodesTest {
         builderCodes.updateMetadata(tokenId);
 
         // Verify original registrar still works
-        string memory originalCode = "originalstillworks";
         vm.prank(registrar);
-        builderCodes.register(originalCode, testOwner, testPayoutAddress);
+        string memory originalCode = builderCodes.register(testOwner, testPayoutAddress);
         assertTrue(builderCodes.isRegistered(originalCode));
     }
 

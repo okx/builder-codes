@@ -34,14 +34,13 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
         builderCodes.updatePayoutAddress(unregisteredCode, payoutAddress);
     }
 
-    /// @notice Test that updatePayoutAddress reverts when the payout address is zero address
+    /// @notice Test that updatePayoutAddress reverts when the sender is not the token owner
     ///
-    /// @param codeSeed The seed for generating the code
+    /// @param sender The unauthorized sender
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     function test_updatePayoutAddress_revert_unauthorized(
         address sender,
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress
     ) public {
@@ -49,11 +48,9 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
         initialOwner = _boundNonZeroAddress(initialOwner);
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
 
-        string memory validCode = _generateValidCode(codeSeed);
-
         // First register a code
         vm.prank(registrar);
-        builderCodes.register(validCode, initialOwner, initialPayoutAddress);
+        string memory validCode = builderCodes.register(initialOwner, initialPayoutAddress);
 
         // Try to update with zero address - should revert with unauthorized first since msg.sender != owner
         vm.prank(sender);
@@ -66,11 +63,9 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
 
     /// @notice Test that updatePayoutAddress reverts when the payout address is zero address
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     function test_updatePayoutAddress_revert_zeroPayoutAddress(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress
     ) public {
@@ -78,11 +73,9 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
         vm.assume(initialOwner != address(this));
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
 
-        string memory validCode = _generateValidCode(codeSeed);
-
         // First register a code
         vm.prank(registrar);
-        builderCodes.register(validCode, initialOwner, initialPayoutAddress);
+        string memory validCode = builderCodes.register(initialOwner, initialPayoutAddress);
 
         // Try to update with zero address - should revert with zero address
         vm.prank(initialOwner);
@@ -95,12 +88,10 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
 
     /// @notice Test that updatePayoutAddress successfully updates the payout address
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     /// @param newPayoutAddress The new payout address to test
     function test_updatePayoutAddress_success_payoutAddressUpdated(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress,
         address newPayoutAddress
@@ -109,11 +100,9 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
         newPayoutAddress = _boundNonZeroAddress(newPayoutAddress);
 
-        string memory validCode = _generateValidCode(codeSeed);
-
         // First register a code
         vm.prank(registrar);
-        builderCodes.register(validCode, initialOwner, initialPayoutAddress);
+        string memory validCode = builderCodes.register(initialOwner, initialPayoutAddress);
 
         // Update the payout address
         vm.prank(initialOwner);
@@ -125,13 +114,11 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
 
     /// @notice Test that updatePayoutAddress allows new owner to update the payout address
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     /// @param newOwner The new owner address
     /// @param newPayoutAddress The new payout address to test
     function test_updatePayoutAddress_success_newOwnerCanUpdate(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress,
         address newOwner,
@@ -144,11 +131,9 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
 
         vm.assume(newOwner != initialOwner);
 
-        string memory validCode = _generateValidCode(codeSeed);
-
         // First register a code
         vm.prank(registrar);
-        builderCodes.register(validCode, initialOwner, initialPayoutAddress);
+        string memory validCode = builderCodes.register(initialOwner, initialPayoutAddress);
 
         // Transfer the token to new owner
         uint256 tokenId = builderCodes.toTokenId(validCode);
@@ -167,12 +152,10 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
 
     /// @notice Test that updatePayoutAddress emits the PayoutAddressUpdated event
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     /// @param newPayoutAddress The new payout address to test
     function test_updatePayoutAddress_success_emitsPayoutAddressUpdated(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress,
         address newPayoutAddress
@@ -181,11 +164,9 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
         newPayoutAddress = _boundNonZeroAddress(newPayoutAddress);
 
-        string memory validCode = _generateValidCode(codeSeed);
-
         // First register a code
         vm.prank(registrar);
-        builderCodes.register(validCode, initialOwner, initialPayoutAddress);
+        string memory validCode = builderCodes.register(initialOwner, initialPayoutAddress);
 
         uint256 tokenId = builderCodes.toTokenId(validCode);
 

@@ -11,12 +11,10 @@ contract TransferFromTest is BuilderCodesTest {
     ///
     /// @param from The from address
     /// @param to The to address
-    /// @param codeSeed The seed for generating the code
     /// @param payoutAddress The payout address
     function test_transferFrom_revert_tokenOwnerNoTransferRole(
         address from,
         address to,
-        uint256 codeSeed,
         address payoutAddress
     ) public {
         from = _boundNonZeroAddress(from);
@@ -26,10 +24,9 @@ contract TransferFromTest is BuilderCodesTest {
         payoutAddress = _boundNonZeroAddress(payoutAddress);
 
         // Register the code
-        string memory code = _generateValidCode(codeSeed);
-        uint256 tokenId = builderCodes.toTokenId(code);
         vm.prank(owner);
-        builderCodes.register(code, from, payoutAddress);
+        string memory code = builderCodes.register(from, payoutAddress);
+        uint256 tokenId = builderCodes.toTokenId(code);
 
         // Attempt token transfer
         vm.prank(from);
@@ -48,12 +45,10 @@ contract TransferFromTest is BuilderCodesTest {
     ///
     /// @param from The from address
     /// @param to The to address
-    /// @param codeSeed The seed for generating the code
     /// @param payoutAddress The payout address
     function test_transferFrom_revert_approvedNoTransferRole(
         address from,
         address to,
-        uint256 codeSeed,
         address payoutAddress
     ) public {
         from = _boundNonZeroAddress(from);
@@ -64,10 +59,9 @@ contract TransferFromTest is BuilderCodesTest {
         payoutAddress = _boundNonZeroAddress(payoutAddress);
 
         // Register the code
-        string memory code = _generateValidCode(codeSeed);
-        uint256 tokenId = builderCodes.toTokenId(code);
         vm.prank(owner);
-        builderCodes.register(code, from, payoutAddress);
+        string memory code = builderCodes.register(from, payoutAddress);
+        uint256 tokenId = builderCodes.toTokenId(code);
 
         // Approve `to` to transfer the token
         vm.prank(from);
@@ -90,12 +84,10 @@ contract TransferFromTest is BuilderCodesTest {
     ///
     /// @param from The from address
     /// @param to The to address
-    /// @param codeSeed The seed for generating the code
     /// @param payoutAddress The payout address
     function test_transferFrom_success_tokenOwnerHasTransferRole(
         address from,
         address to,
-        uint256 codeSeed,
         address payoutAddress
     ) public {
         from = _boundNonZeroAddress(from);
@@ -105,10 +97,9 @@ contract TransferFromTest is BuilderCodesTest {
         payoutAddress = _boundNonZeroAddress(payoutAddress);
 
         // Register the code
-        string memory code = _generateValidCode(codeSeed);
-        uint256 tokenId = builderCodes.toTokenId(code);
         vm.prank(owner);
-        builderCodes.register(code, from, payoutAddress);
+        string memory code = builderCodes.register(from, payoutAddress);
+        uint256 tokenId = builderCodes.toTokenId(code);
 
         // Grant the `from` the transfer role
         vm.prank(owner);
@@ -128,12 +119,10 @@ contract TransferFromTest is BuilderCodesTest {
     ///
     /// @param from The from address
     /// @param to The to address
-    /// @param codeSeed The seed for generating the code
     /// @param payoutAddress The payout address
     function test_transferFrom_success_approvedHasTransferRole(
         address from,
         address to,
-        uint256 codeSeed,
         address payoutAddress
     ) public {
         from = _boundNonZeroAddress(from);
@@ -143,10 +132,9 @@ contract TransferFromTest is BuilderCodesTest {
         payoutAddress = _boundNonZeroAddress(payoutAddress);
 
         // Register the code
-        string memory code = _generateValidCode(codeSeed);
-        uint256 tokenId = builderCodes.toTokenId(code);
         vm.prank(owner);
-        builderCodes.register(code, from, payoutAddress);
+        string memory code = builderCodes.register(from, payoutAddress);
+        uint256 tokenId = builderCodes.toTokenId(code);
 
         // Approve `to` to transfer the token
         vm.prank(from);

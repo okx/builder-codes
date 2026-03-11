@@ -19,21 +19,18 @@ contract TokenURITest is BuilderCodesTest {
 
     /// @notice Test that tokenURI returns correct URI for registered token when base URI is set
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     function test_tokenURI_success_returnsCorrectURIWithBaseURI(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress
     ) public {
         initialOwner = _boundNonZeroAddress(initialOwner);
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
-        string memory validCode = _generateValidCode(codeSeed);
 
         // Register a code first
         vm.prank(registrar);
-        builderCodes.register(validCode, initialOwner, initialPayoutAddress);
+        string memory validCode = builderCodes.register(initialOwner, initialPayoutAddress);
 
         uint256 tokenId = builderCodes.toTokenId(validCode);
         string memory tokenURI = builderCodes.tokenURI(tokenId);
@@ -45,17 +42,14 @@ contract TokenURITest is BuilderCodesTest {
 
     /// @notice Test that tokenURI returns empty string when base URI is not set
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     function test_tokenURI_success_returnsEmptyStringWithoutBaseURI(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress
     ) public {
         initialOwner = _boundNonZeroAddress(initialOwner);
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
-        string memory validCode = _generateValidCode(codeSeed);
 
         // Deploy fresh contract with empty base URI
         BuilderCodes freshContract = _deployFreshBuilderCodes();
@@ -63,7 +57,7 @@ contract TokenURITest is BuilderCodesTest {
 
         // Register a code
         vm.prank(initialOwner);
-        freshContract.register(validCode, initialOwner, initialPayoutAddress);
+        string memory validCode = freshContract.register(initialOwner, initialPayoutAddress);
 
         uint256 tokenId = freshContract.toTokenId(validCode);
         string memory tokenURI = freshContract.tokenURI(tokenId);
@@ -73,19 +67,17 @@ contract TokenURITest is BuilderCodesTest {
 
     /// @notice Test that tokenURI returns same result as codeURI for equivalent inputs
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
-    function test_tokenURI_success_matchesCodeURI(uint256 codeSeed, address initialOwner, address initialPayoutAddress)
+    function test_tokenURI_success_matchesCodeURI(address initialOwner, address initialPayoutAddress)
         public
     {
         initialOwner = _boundNonZeroAddress(initialOwner);
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
-        string memory validCode = _generateValidCode(codeSeed);
 
         // Register a code first
         vm.prank(registrar);
-        builderCodes.register(validCode, initialOwner, initialPayoutAddress);
+        string memory validCode = builderCodes.register(initialOwner, initialPayoutAddress);
 
         uint256 tokenId = builderCodes.toTokenId(validCode);
         string memory tokenURI = builderCodes.tokenURI(tokenId);
@@ -96,23 +88,20 @@ contract TokenURITest is BuilderCodesTest {
 
     /// @notice Test that tokenURI reflects updated base URI
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     /// @param newBaseURI The new base URI
     function test_tokenURI_success_reflectsUpdatedBaseURI(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress,
         string memory newBaseURI
     ) public {
         initialOwner = _boundNonZeroAddress(initialOwner);
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
-        string memory validCode = _generateValidCode(codeSeed);
 
         // Register a code first
         vm.prank(registrar);
-        builderCodes.register(validCode, initialOwner, initialPayoutAddress);
+        string memory validCode = builderCodes.register(initialOwner, initialPayoutAddress);
 
         uint256 tokenId = builderCodes.toTokenId(validCode);
 

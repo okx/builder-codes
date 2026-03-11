@@ -8,17 +8,16 @@ import {MockTransferRules} from "../lib/mocks/MockTransferRules.sol";
 
 /// @notice Integration tests for BuilderCodes transfers
 contract BuilderCodesTransfersTest is BuilderCodesTest {
-    function test_nonTransferableByDefault(address from, address to, uint256 codeSeed, address payoutAddress) public {
+    function test_nonTransferableByDefault(address from, address to, address payoutAddress) public {
         from = _boundNonZeroAddress(from);
         to = _boundNonZeroAddress(to);
         vm.assume(!builderCodes.hasRole(TRANSFER_ROLE, from));
         vm.assume(from != to);
         payoutAddress = _boundNonZeroAddress(payoutAddress);
 
-        string memory code = _generateValidCode(codeSeed);
-        uint256 tokenId = builderCodes.toTokenId(code);
         vm.prank(owner);
-        builderCodes.register(code, from, payoutAddress);
+        string memory code = builderCodes.register(from, payoutAddress);
+        uint256 tokenId = builderCodes.toTokenId(code);
 
         // Attempt transfer from, safeTransferFrom, and safeTransferFrom with data
         vm.startPrank(from);
@@ -47,11 +46,8 @@ contract BuilderCodesTransfersTest is BuilderCodesTest {
     ///
     /// @param from The from address
     /// @param to The to address
-    /// @param codeSeed The seed for generating the code
     /// @param payoutAddress The payout address
-    function test_approveTransferRulesToTransferToken(address from, address to, uint256 codeSeed, address payoutAddress)
-        public
-    {
+    function test_approveTransferRulesToTransferToken(address from, address to, address payoutAddress) public {
         from = _boundNonZeroAddress(from);
         to = _boundNonZeroAddress(to);
         vm.assume(from != owner);
@@ -60,10 +56,9 @@ contract BuilderCodesTransfersTest is BuilderCodesTest {
         MockTransferRules mockTransferRules = new MockTransferRules(address(builderCodes));
 
         // Register the code
-        string memory code = _generateValidCode(codeSeed);
-        uint256 tokenId = builderCodes.toTokenId(code);
         vm.prank(owner);
-        builderCodes.register(code, from, payoutAddress);
+        string memory code = builderCodes.register(from, payoutAddress);
+        uint256 tokenId = builderCodes.toTokenId(code);
 
         // Owner grants transfer role to transfer rules
         vm.prank(owner);
@@ -89,13 +84,11 @@ contract BuilderCodesTransfersTest is BuilderCodesTest {
 
     /// @notice Test that transferred code preserves the payout address
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param payoutAddress The payout address
     /// @param secondOwner The second owner address
     /// @param newPayoutAddress The new payout address for testing updates
     function test_transferedCodePreservesPayoutAddress(
-        uint256 codeSeed,
         address initialOwner,
         address payoutAddress,
         address secondOwner,
@@ -108,11 +101,9 @@ contract BuilderCodesTransfersTest is BuilderCodesTest {
 
         vm.assume(initialOwner != secondOwner);
 
-        string memory code = _generateValidCode(codeSeed);
-
         // Register the code with initial owner and payout address
         vm.prank(registrar);
-        builderCodes.register(code, initialOwner, payoutAddress);
+        string memory code = builderCodes.register(initialOwner, payoutAddress);
 
         // Verify initial state
         uint256 tokenId = builderCodes.toTokenId(code);

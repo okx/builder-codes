@@ -76,22 +76,18 @@ contract PayoutAddressTest is BuilderCodesTest {
 
     /// @notice Test that payoutAddress(string) returns correct address for registered code
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     function test_payoutAddressString_success_returnsCorrectAddress(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress
     ) public {
         initialOwner = _boundNonZeroAddress(initialOwner);
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
 
-        string memory code = _generateValidCode(codeSeed);
-
         // Register the code first
         vm.prank(registrar);
-        builderCodes.register(code, initialOwner, initialPayoutAddress);
+        string memory code = builderCodes.register(initialOwner, initialPayoutAddress);
 
         address retrievedAddress = builderCodes.payoutAddress(code);
         assertEq(retrievedAddress, initialPayoutAddress);
@@ -99,23 +95,19 @@ contract PayoutAddressTest is BuilderCodesTest {
 
     /// @notice Test that payoutAddress(uint256) returns correct address for registered token
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     function test_payoutAddressUint256_success_returnsCorrectAddress(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress
     ) public {
         initialOwner = _boundNonZeroAddress(initialOwner);
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
 
-        string memory code = _generateValidCode(codeSeed);
-        uint256 tokenId = builderCodes.toTokenId(code);
-
         // Register the code first
         vm.prank(registrar);
-        builderCodes.register(code, initialOwner, initialPayoutAddress);
+        string memory code = builderCodes.register(initialOwner, initialPayoutAddress);
+        uint256 tokenId = builderCodes.toTokenId(code);
 
         address retrievedAddress = builderCodes.payoutAddress(tokenId);
         assertEq(retrievedAddress, initialPayoutAddress);
@@ -123,23 +115,19 @@ contract PayoutAddressTest is BuilderCodesTest {
 
     /// @notice Test that both overloads return the same address for equivalent inputs
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     function test_payoutAddress_success_overloadsReturnSameAddress(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress
     ) public {
         initialOwner = _boundNonZeroAddress(initialOwner);
         initialPayoutAddress = _boundNonZeroAddress(initialPayoutAddress);
 
-        string memory code = _generateValidCode(codeSeed);
-        uint256 tokenId = builderCodes.toTokenId(code);
-
         // Register the code first
         vm.prank(registrar);
-        builderCodes.register(code, initialOwner, initialPayoutAddress);
+        string memory code = builderCodes.register(initialOwner, initialPayoutAddress);
+        uint256 tokenId = builderCodes.toTokenId(code);
 
         address addressFromString = builderCodes.payoutAddress(code);
         address addressFromUint256 = builderCodes.payoutAddress(tokenId);
@@ -149,12 +137,10 @@ contract PayoutAddressTest is BuilderCodesTest {
 
     /// @notice Test that payoutAddress reflects updated payout address
     ///
-    /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
     /// @param newPayoutAddress The new payout address
     function test_payoutAddress_success_reflectsUpdatedAddress(
-        uint256 codeSeed,
         address initialOwner,
         address initialPayoutAddress,
         address newPayoutAddress
@@ -164,11 +150,9 @@ contract PayoutAddressTest is BuilderCodesTest {
         newPayoutAddress = _boundNonZeroAddress(newPayoutAddress);
         vm.assume(initialPayoutAddress != newPayoutAddress);
 
-        string memory code = _generateValidCode(codeSeed);
-
         // Register the code first
         vm.prank(registrar);
-        builderCodes.register(code, initialOwner, initialPayoutAddress);
+        string memory code = builderCodes.register(initialOwner, initialPayoutAddress);
 
         // Verify initial payout address
         assertEq(builderCodes.payoutAddress(code), initialPayoutAddress);
