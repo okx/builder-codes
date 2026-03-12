@@ -17,7 +17,6 @@ import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 ///
 /// @notice ERC-721 NFT for builders to register codes to identify their apps
 ///
-/// @author Coinbase (https://github.com/base/builder-codes)
 contract BuilderCodes is
     Initializable,
     ERC721Upgradeable,
@@ -27,13 +26,15 @@ contract BuilderCodes is
     EIP712,
     IERC4906
 {
-    /// @notice EIP-712 storage structure for registry data
+    /// @notice Registry storage structure for builder code data
     /// @custom:storage-location erc7201:base.BuilderCodes
     struct RegistryStorage {
         /// @dev Base URI for builder code metadata
         string uriPrefix;
         /// @dev Mapping of builder code token IDs to payout recipients
         mapping(uint256 tokenId => address payoutAddress) payoutAddresses;
+        /// @dev Whether auto registration is enabled (default: false)
+        bool autoRegistrationEnabled;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -53,12 +54,19 @@ contract BuilderCodes is
     bytes32 public constant REGISTRATION_TYPEHASH =
         keccak256("BuilderCodeRegistration(string code,address initialOwner,address payoutAddress,uint48 deadline)");
 
+    /// @notice Maximum number of attempts to generate a unique code
+    uint256 public constant MAX_CODE_GENERATION_ATTEMPTS = 50;
+
+    /// @notice Length of auto-generated builder codes
+    uint8 public constant GENERATED_CODE_LENGTH = 16;
+
     /// @notice Allowed characters for builder codes
-    string public constant ALLOWED_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyz_";
+    /// @dev Underscore excluded to avoid codes starting with '_' which affects readability
+    string public constant ALLOWED_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyz";
 
     /// @notice Allowed characters for builder codes lookup
     /// @dev LibString.to7BitASCIIAllowedLookup(ALLOWED_CHARACTERS)
-    uint128 public constant ALLOWED_CHARACTERS_LOOKUP = 10633823847437083212121898993101832192;
+    uint128 public constant ALLOWED_CHARACTERS_LOOKUP = 10633823807823001954989730196329857024;
 
     /// @notice EIP-1967 storage slot base for registry mapping using ERC-7201
     /// @dev keccak256(abi.encode(uint256(keccak256("base.BuilderCodes")) - 1)) & ~bytes32(uint256(0xff))
@@ -80,6 +88,11 @@ contract BuilderCodes is
     /// @param tokenId Token ID of the builder code
     /// @param payoutAddress New payout address
     event PayoutAddressUpdated(uint256 indexed tokenId, address payoutAddress);
+
+    /// @notice Emitted when auto registration is toggled
+    ///
+    /// @param enabled Whether auto registration is enabled
+    event AutoRegistrationToggled(bool enabled);
 
     ////////////////////////////////////////////////////////////////
     ///                          Errors                          ///
@@ -105,6 +118,12 @@ contract BuilderCodes is
 
     /// @notice Thrown when builder code is not registered
     error Unregistered(string code);
+
+    /// @notice Thrown when code generation fails after max attempts
+    error CodeGenerationFailed();
+
+    /// @notice Thrown when auto registration is not enabled
+    error AutoRegistrationDisabled();
 
     /// @notice Thrown when trying to renounce ownership (disabled for security)
     error OwnershipRenunciationDisabled();
@@ -150,6 +169,23 @@ contract BuilderCodes is
         _register(code, initialOwner, initialPayoutAddress);
     }
 
+    /// @notice Registers a new builder code with an auto-generated code
+    ///
+    /// @dev Code is generated on-chain using hash of msg.sender, block data, and nonce
+    /// @dev NFT is minted to msg.sender
+    ///
+    /// @param initialPayoutAddress Default payout address
+    ///
+    /// @return code The auto-generated builder code
+    function registerAuto(address initialPayoutAddress)
+        external
+        returns (string memory code)
+    {
+        if (!_getRegistryStorage().autoRegistrationEnabled) revert AutoRegistrationDisabled();
+        code = _generateCode(msg.sender, initialPayoutAddress);
+        _register(code, msg.sender, initialPayoutAddress);
+    }
+
     /// @notice Registers a new builder code in the system with a signature
     ///
     /// @dev Requires registration deadline has not passed
@@ -184,6 +220,23 @@ contract BuilderCodes is
         }
 
         _register(code, initialOwner, initialPayoutAddress);
+    }
+
+    /// @notice Toggles auto registration on or off
+    ///
+    /// @dev Requires sender is owner
+    ///
+    /// @param enabled Whether auto registration should be enabled
+    function setAutoRegistration(bool enabled) external onlyOwner {
+        _getRegistryStorage().autoRegistrationEnabled = enabled;
+        emit AutoRegistrationToggled(enabled);
+    }
+
+    /// @notice Returns whether auto registration is enabled
+    ///
+    /// @return enabled True if auto registration is enabled
+    function autoRegistrationEnabled() external view returns (bool) {
+        return _getRegistryStorage().autoRegistrationEnabled;
     }
 
     /// @inheritdoc ERC721Upgradeable
@@ -382,7 +435,46 @@ contract BuilderCodes is
         _updatePayoutAddress(tokenId, initialPayoutAddress);
     }
 
-    /// @notice Registers a new builder code
+    /// @notice Generates a unique builder code on-chain
+    ///
+    /// @dev Uses keccak256 of addresses, block data, and nonce; retries on collision
+    ///
+    /// @param initialOwner Owner address to use as seed
+    /// @param initialPayoutAddress Payout address to use as seed
+    ///
+    /// @return code The generated builder code
+    function _generateCode(address initialOwner, address initialPayoutAddress) internal view returns (string memory) {
+        for (uint256 nonce = 0; nonce < MAX_CODE_GENERATION_ATTEMPTS; nonce++) {
+            bytes32 hash =
+                keccak256(abi.encodePacked(initialOwner, initialPayoutAddress, block.number, block.prevrandao, nonce));
+
+            string memory code = _hashToCode(hash);
+            uint256 tokenId = toTokenId(code);
+            if (_ownerOf(tokenId) == address(0)) {
+                return code;
+            }
+        }
+
+        revert CodeGenerationFailed();
+    }
+
+    /// @notice Converts a hash to a valid builder code string
+    ///
+    /// @dev Maps each byte of the hash to one of 36 allowed characters (0-9a-z)
+    ///
+    /// @param hash The hash to convert
+    ///
+    /// @return code The builder code string
+    function _hashToCode(bytes32 hash) internal pure returns (string memory) {
+        bytes memory allowedChars = bytes(ALLOWED_CHARACTERS);
+        bytes memory result = new bytes(GENERATED_CODE_LENGTH);
+        for (uint256 i = 0; i < GENERATED_CODE_LENGTH; i++) {
+            result[i] = allowedChars[uint8(hash[i]) % allowedChars.length];
+        }
+        return string(result);
+    }
+
+    /// @notice Updates the payout address for a builder code
     ///
     /// @dev Requires non-zero payout address
     ///

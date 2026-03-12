@@ -34,8 +34,9 @@ contract UpdatePayoutAddressTest is BuilderCodesTest {
         builderCodes.updatePayoutAddress(unregisteredCode, payoutAddress);
     }
 
-    /// @notice Test that updatePayoutAddress reverts when the payout address is zero address
+    /// @notice Test that updatePayoutAddress reverts when caller is not token owner
     ///
+    /// @param sender The unauthorized caller
     /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param initialPayoutAddress The initial payout address
