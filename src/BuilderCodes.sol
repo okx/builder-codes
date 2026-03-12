@@ -161,18 +161,18 @@ contract BuilderCodes is
 
     /// @notice Registers a new builder code with an auto-generated code
     ///
-    /// @dev Code is generated on-chain using hash of addresses, block data, and nonce
+    /// @dev Code is generated on-chain using hash of msg.sender, block data, and nonce
+    /// @dev NFT is minted to msg.sender
     ///
-    /// @param initialOwner Owner of the builder code
     /// @param initialPayoutAddress Default payout address
     ///
     /// @return code The auto-generated builder code
-    function registerAuto(address initialOwner, address initialPayoutAddress)
+    function registerAuto(address initialPayoutAddress)
         external
         returns (string memory code)
     {
-        code = _generateCode(initialOwner, initialPayoutAddress);
-        _register(code, initialOwner, initialPayoutAddress);
+        code = _generateCode(msg.sender, initialPayoutAddress);
+        _register(code, msg.sender, initialPayoutAddress);
     }
 
     /// @notice Registers a new builder code in the system with a signature
