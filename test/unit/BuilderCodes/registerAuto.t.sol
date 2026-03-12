@@ -39,12 +39,24 @@ contract RegisterAutoTest is BuilderCodesTest {
         builderCodes.setAutoRegistration(true);
     }
 
-    /// @notice Test that setAutoRegistration emits AutoRegistrationToggled event
-    function test_setAutoRegistration_success_emitsEvent() public {
+    /// @notice Test that setAutoRegistration emits AutoRegistrationToggled(false) event
+    function test_setAutoRegistration_success_emitsEventFalse() public {
         vm.prank(owner);
         vm.expectEmit(false, false, false, true);
         emit BuilderCodes.AutoRegistrationToggled(false);
         builderCodes.setAutoRegistration(false);
+    }
+
+    /// @notice Test that setAutoRegistration emits AutoRegistrationToggled(true) event
+    function test_setAutoRegistration_success_emitsEventTrue() public {
+        // Disable first so we can test the true toggle
+        vm.prank(owner);
+        builderCodes.setAutoRegistration(false);
+
+        vm.prank(owner);
+        vm.expectEmit(false, false, false, true);
+        emit BuilderCodes.AutoRegistrationToggled(true);
+        builderCodes.setAutoRegistration(true);
     }
 
     /// @notice Test that autoRegistrationEnabled returns correct state
