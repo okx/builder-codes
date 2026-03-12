@@ -162,7 +162,6 @@ contract BuilderCodes is
     /// @notice Registers a new builder code with an auto-generated code
     ///
     /// @dev Code is generated on-chain using hash of addresses, block data, and nonce
-    /// @dev Requires sender has REGISTER_ROLE
     ///
     /// @param initialOwner Owner of the builder code
     /// @param initialPayoutAddress Default payout address
