@@ -1,11 +1,10 @@
 # Builder Codes
 
-An ERC-721 NFT contract that enables builders to register unique codes (e.g., `"myapp"`) with an associated payout addresses for revenue attribution and distribution. Implements the [ERC-8021](https://eip.tools/eip/8021) `ICodesRegistry` interface.
+An ERC-721 NFT contract that enables builders to register unique codes with associated payout addresses for revenue attribution and distribution.
 
 ## Features
 
-- **Unique Code Registration**: Mint ERC-721 tokens representing alphanumeric codes (1-32 characters)
-- **Flexible Registration Methods**: Direct registration via authorized registrars or gasless signature-based registration
+- **Auto-Generated Codes**: 16-character codes generated on-chain from user address, payout address, and block data
 - **Revenue Attribution**: Each code has a configurable payout address for tracking and distributing revenue
 - **Role-Based Access Control**: Granular permissions for registration, transfers, and metadata updates
 - **Upgradeable Design**: UUPS proxy pattern enables future enhancements while preserving state
@@ -26,7 +25,7 @@ The contract employs a **central registry with periphery registrars** architectu
 - **Restricted Transfers**: Only addresses with `TRANSFER_ROLE` can initiate transfers, preventing unauthorized code transfers
 
 **Roles:**
-- `REGISTER_ROLE`: Authorize code registration (direct calls or signatures)
+- `REGISTER_ROLE`: Authorize code registration (when role check is enabled)
 - `TRANSFER_ROLE`: Authorize token transfers
 - `METADATA_ROLE`: Update token metadata URIs
 - **Owner**: Automatically has all roles via `hasRole()` override and can manage role grants
@@ -46,7 +45,16 @@ The contract uses the **UUPS (Universal Upgradeable Proxy Standard)** pattern:
 Builder codes must adhere to strict formatting rules:
 
 - **Length**: 1-32 characters
-- **Allowed Characters**: Lowercase letters (`a-z`), digits (`0-9`), and underscore (`_`)
+- **Allowed Characters**: Lowercase letters (`a-z`) and digits (`0-9`)
+
+### Auto-Generation
+
+Codes are automatically generated on-chain during registration:
+
+1. Hash is computed from `keccak256(initialOwner, initialPayoutAddress, block.number, block.prevrandao, nonce)`
+2. Each byte of the hash is mapped to one of the 36 allowed characters (`0-9a-z`)
+3. Result is a 16-character code
+4. If a collision occurs, the nonce is incremented and a new code is generated (up to 50 attempts)
 
 ### Token ID Conversion
 
@@ -54,58 +62,22 @@ The contract provides `toCode()` and `toTokenId()` as pure functions that bidire
 
 ## Registration
 
-### Direct Registration
-
-The `register()` function allows authorized registrars to mint codes:
+The `register()` function generates a unique code on-chain and mints it as an NFT:
 
 ```solidity
 function register(
-    string memory code,
     address initialOwner,
     address initialPayoutAddress
-) external onlyRole(REGISTER_ROLE)
+) external returns (string memory code)
 ```
 
 **Flow:**
-1. Caller must have `REGISTER_ROLE` (or be owner)
-2. Code is validated for format compliance
+1. When `registerRoleEnabled` is true, caller must have `REGISTER_ROLE` (or be owner); otherwise open to anyone
+2. Code is auto-generated on-chain using hash of owner, payout address, and block data
 3. Token is minted to `initialOwner`
 4. Payout address is set to `initialPayoutAddress`
 5. Events emitted: `Transfer`, `CodeRegistered`, `PayoutAddressUpdated`
-
-### Signature-Based Registration
-
-The `registerWithSignature()` function enables gasless registration via EIP-712 signatures:
-
-```solidity
-function registerWithSignature(
-    string memory code,
-    address initialOwner,
-    address initialPayoutAddress,
-    uint48 deadline,
-    address signer,
-    bytes memory signature
-) external
-```
-
-**Flow:**
-1. Verify deadline has not passed
-2. Verify `signer` has `REGISTER_ROLE`
-3. Compute EIP-712 typed data hash for registration parameters
-4. Validate signature against signer's address
-5. Execute registration (same as direct registration)
-
-**EIP-712 Typed Data:**
-```
-BuilderCodeRegistration(
-    string code,
-    address initialOwner,
-    address payoutAddress,
-    uint48 deadline
-)
-```
-
-This pattern allows users to obtain off-chain signatures from authorized registrars and submit registrations without the registrar paying gas.
+6. The generated code is returned to the caller
 
 ## Transfer Restrictions
 
@@ -116,4 +88,3 @@ BuilderCodes implements a permission-gated transfer system to control how codes 
 2. Holders of `TRANSFER_ROLE` cannot move tokens unilaterally—they still need approval from each owner to transfer tokens
 
 This design enables intentional rollout of specific transfer patterns, such as controlled marketplaces or recovery mechanisms.
-
