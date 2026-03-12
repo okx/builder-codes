@@ -12,11 +12,17 @@
 - **`GENERATED_CODE_LENGTH`** constant (`16`)
 - **`CodeGenerationFailed()`** custom error
 - Unit tests for `registerAuto` covering success cases, collision handling, and revert cases
+- **`setAutoRegistration(bool enabled)`** — Owner-only function to toggle auto registration on/off
+- **`autoRegistrationEnabled()`** — View function to query current auto registration state
+- **`AutoRegistrationToggled(bool enabled)`** event — Emitted when auto registration is toggled
+- **`AutoRegistrationDisabled()`** custom error — Thrown when `registerAuto` is called while disabled
+- **`autoRegistrationEnabled`** field in `RegistryStorage` (default: `false`)
 
 ### Changed
 - **`ALLOWED_CHARACTERS`** — Removed underscore (`_`) to prevent codes starting with `_` which affects readability
   - Old: `"0123456789abcdefghijklmnopqrstuvwxyz_"` (37 chars)
   - New: `"0123456789abcdefghijklmnopqrstuvwxyz"` (36 chars)
 - **`ALLOWED_CHARACTERS_LOOKUP`** — Updated to match new allowed characters set
-- **`registerAuto`** is open to anyone (no `REGISTER_ROLE` restriction)
+- **`registerAuto`** is open to anyone (no `REGISTER_ROLE` restriction), but requires auto registration to be enabled by owner
+- **`registerAuto`** — Gated by `autoRegistrationEnabled` toggle (default off, owner controls via `setAutoRegistration`)
 - **`registerAuto`** — Removed `initialOwner` parameter; NFT is now always minted to `msg.sender`

@@ -1,11 +1,11 @@
 # Builder Codes
 
-An ERC-721 NFT contract that enables builders to register unique codes (e.g., `"myapp"`) with an associated payout addresses for revenue attribution and distribution. Implements the [ERC-8021](https://eip.tools/eip/8021) `ICodesRegistry` interface.
+An ERC-721 NFT contract that enables builders to register unique codes (e.g., `"myapp"`) with an associated payout address for revenue attribution and distribution.
 
 ## Features
 
 - **Unique Code Registration**: Mint ERC-721 tokens representing alphanumeric codes (1-32 characters)
-- **Flexible Registration Methods**: Direct registration via authorized registrars or gasless signature-based registration
+- **Flexible Registration Methods**: Direct registration via authorized registrars, owner-gated auto registration, or gasless signature-based registration
 - **Revenue Attribution**: Each code has a configurable payout address for tracking and distributing revenue
 - **Role-Based Access Control**: Granular permissions for registration, transfers, and metadata updates
 - **Upgradeable Design**: UUPS proxy pattern enables future enhancements while preserving state
@@ -35,7 +35,7 @@ The contract employs a **central registry with periphery registrars** architectu
 
 The contract uses the **UUPS (Universal Upgradeable Proxy Standard)** pattern:
 
-- **Proxy Pattern**: ERC-1967 transparent proxy separates logic (implementation) from state (proxy)
+- **Proxy Pattern**: ERC-1967 proxy with UUPS upgrade authorization separates logic (implementation) from state (proxy)
 - **Storage Safety**: ERC-7201 namespaced storage prevents collisions during upgrades
 - **Owner-Only Upgrades**: Only the contract owner can authorize implementation upgrades via `_authorizeUpgrade()`
 
@@ -46,7 +46,7 @@ The contract uses the **UUPS (Universal Upgradeable Proxy Standard)** pattern:
 Builder codes must adhere to strict formatting rules:
 
 - **Length**: 1-32 characters
-- **Allowed Characters**: Lowercase letters (`a-z`), digits (`0-9`), and underscore (`_`)
+- **Allowed Characters**: Lowercase letters (`a-z`) and digits (`0-9`)
 
 ### Token ID Conversion
 
@@ -72,6 +72,20 @@ function register(
 3. Token is minted to `initialOwner`
 4. Payout address is set to `initialPayoutAddress`
 5. Events emitted: `Transfer`, `CodeRegistered`, `PayoutAddressUpdated`
+
+### Auto Registration (Owner-Gated)
+
+The `registerAuto()` function allows any caller to register a generated code when auto registration is enabled by the owner:
+
+```solidity
+function registerAuto(address initialPayoutAddress) external returns (string memory code)
+```
+
+**Flow:**
+1. Owner enables auto registration via `setAutoRegistration(true)`
+2. Caller invokes `registerAuto(initialPayoutAddress)`
+3. Contract generates a unique 16-character code and mints the NFT to `msg.sender`
+4. If auto registration is disabled, call reverts with `AutoRegistrationDisabled()`
 
 ### Signature-Based Registration
 
@@ -116,4 +130,3 @@ BuilderCodes implements a permission-gated transfer system to control how codes 
 2. Holders of `TRANSFER_ROLE` cannot move tokens unilaterally—they still need approval from each owner to transfer tokens
 
 This design enables intentional rollout of specific transfer patterns, such as controlled marketplaces or recovery mechanisms.
-

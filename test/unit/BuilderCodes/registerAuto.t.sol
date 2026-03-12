@@ -10,6 +10,52 @@ import {BuilderCodesTest, IERC721Errors} from "../../lib/BuilderCodesTest.sol";
 
 /// @notice Unit tests for BuilderCodes.registerAuto
 contract RegisterAutoTest is BuilderCodesTest {
+    function setUp() public override {
+        super.setUp();
+        // Enable auto registration for tests
+        vm.prank(owner);
+        builderCodes.setAutoRegistration(true);
+    }
+
+    /// @notice Test that registerAuto reverts when auto registration is disabled
+    function test_registerAuto_revert_autoRegistrationDisabled(address sender, address payoutAddress) public {
+        sender = _boundNonZeroAddress(sender);
+        payoutAddress = _boundNonZeroAddress(payoutAddress);
+
+        // Disable auto registration
+        vm.prank(owner);
+        builderCodes.setAutoRegistration(false);
+
+        vm.prank(sender);
+        vm.expectRevert(BuilderCodes.AutoRegistrationDisabled.selector);
+        builderCodes.registerAuto(payoutAddress);
+    }
+
+    /// @notice Test that setAutoRegistration can only be called by owner
+    function test_setAutoRegistration_revert_notOwner(address caller) public {
+        vm.assume(caller != owner);
+        vm.prank(caller);
+        vm.expectRevert();
+        builderCodes.setAutoRegistration(true);
+    }
+
+    /// @notice Test that setAutoRegistration emits AutoRegistrationToggled event
+    function test_setAutoRegistration_success_emitsEvent() public {
+        vm.prank(owner);
+        vm.expectEmit(false, false, false, true);
+        emit BuilderCodes.AutoRegistrationToggled(false);
+        builderCodes.setAutoRegistration(false);
+    }
+
+    /// @notice Test that autoRegistrationEnabled returns correct state
+    function test_autoRegistrationEnabled_returnsCorrectState() public {
+        assertTrue(builderCodes.autoRegistrationEnabled());
+
+        vm.prank(owner);
+        builderCodes.setAutoRegistration(false);
+        assertFalse(builderCodes.autoRegistrationEnabled());
+    }
+
     /// @notice Test that registerAuto successfully mints a token to msg.sender
     ///
     /// @param sender The sender address

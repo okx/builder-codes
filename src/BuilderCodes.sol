@@ -26,13 +26,15 @@ contract BuilderCodes is
     EIP712,
     IERC4906
 {
-    /// @notice EIP-712 storage structure for registry data
+    /// @notice Registry storage structure for builder code data
     /// @custom:storage-location erc7201:base.BuilderCodes
     struct RegistryStorage {
         /// @dev Base URI for builder code metadata
         string uriPrefix;
         /// @dev Mapping of builder code token IDs to payout recipients
         mapping(uint256 tokenId => address payoutAddress) payoutAddresses;
+        /// @dev Whether auto registration is enabled (default: false)
+        bool autoRegistrationEnabled;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -87,6 +89,11 @@ contract BuilderCodes is
     /// @param payoutAddress New payout address
     event PayoutAddressUpdated(uint256 indexed tokenId, address payoutAddress);
 
+    /// @notice Emitted when auto registration is toggled
+    ///
+    /// @param enabled Whether auto registration is enabled
+    event AutoRegistrationToggled(bool enabled);
+
     ////////////////////////////////////////////////////////////////
     ///                          Errors                          ///
     ////////////////////////////////////////////////////////////////
@@ -114,6 +121,9 @@ contract BuilderCodes is
 
     /// @notice Thrown when code generation fails after max attempts
     error CodeGenerationFailed();
+
+    /// @notice Thrown when auto registration is not enabled
+    error AutoRegistrationDisabled();
 
     /// @notice Thrown when trying to renounce ownership (disabled for security)
     error OwnershipRenunciationDisabled();
@@ -171,6 +181,7 @@ contract BuilderCodes is
         external
         returns (string memory code)
     {
+        if (!_getRegistryStorage().autoRegistrationEnabled) revert AutoRegistrationDisabled();
         code = _generateCode(msg.sender, initialPayoutAddress);
         _register(code, msg.sender, initialPayoutAddress);
     }
@@ -209,6 +220,23 @@ contract BuilderCodes is
         }
 
         _register(code, initialOwner, initialPayoutAddress);
+    }
+
+    /// @notice Toggles auto registration on or off
+    ///
+    /// @dev Requires sender is owner
+    ///
+    /// @param enabled Whether auto registration should be enabled
+    function setAutoRegistration(bool enabled) external onlyOwner {
+        _getRegistryStorage().autoRegistrationEnabled = enabled;
+        emit AutoRegistrationToggled(enabled);
+    }
+
+    /// @notice Returns whether auto registration is enabled
+    ///
+    /// @return enabled True if auto registration is enabled
+    function autoRegistrationEnabled() external view returns (bool) {
+        return _getRegistryStorage().autoRegistrationEnabled;
     }
 
     /// @inheritdoc ERC721Upgradeable
@@ -446,7 +474,7 @@ contract BuilderCodes is
         return string(result);
     }
 
-    /// @notice Registers a new builder code
+    /// @notice Updates the payout address for a builder code
     ///
     /// @dev Requires non-zero payout address
     ///
