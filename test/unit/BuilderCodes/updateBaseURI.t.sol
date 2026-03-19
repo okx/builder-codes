@@ -11,7 +11,7 @@ contract UpdateBaseURITest is BuilderCodesTest {
     event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
 
     /// @notice ERC7572 ContractURIUpdated event
-    event ContractURIUpdated();
+    event ContractURIUpdated(string uriPrefix);
     /// @notice Test that updateBaseURI reverts when sender doesn't have required role
     ///
     /// @param uriPrefix The URI prefix to test
@@ -103,8 +103,8 @@ contract UpdateBaseURITest is BuilderCodesTest {
     ///
     /// @param uriPrefix The URI prefix to test
     function test_updateBaseURI_success_emitsERC7572ContractURIUpdated(string memory uriPrefix) public {
-        vm.expectEmit(false, false, false, false);
-        emit ContractURIUpdated();
+        vm.expectEmit(false, false, false, true);
+        emit ContractURIUpdated(uriPrefix);
 
         vm.prank(owner);
         builderCodes.updateBaseURI(uriPrefix);

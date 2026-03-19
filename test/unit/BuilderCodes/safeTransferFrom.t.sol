@@ -211,6 +211,9 @@ contract SafeTransferFromTest is BuilderCodesTest {
         assertEq(builderCodes.ownerOf(tokenId), to);
         assertEq(builderCodes.balanceOf(from), 0);
         assertEq(builderCodes.balanceOf(to), 1);
+
+        // Verify the payout address was updated to the new owner
+        assertEq(builderCodes.payoutAddress(tokenId), to);
     }
 
     /// @notice Test that safeTransferFrom(from, to, tokenId) succeeds when the approved address has the transfer role
@@ -254,6 +257,9 @@ contract SafeTransferFromTest is BuilderCodesTest {
         assertEq(builderCodes.ownerOf(tokenId), to);
         assertEq(builderCodes.balanceOf(from), 0);
         assertEq(builderCodes.balanceOf(to), 1);
+
+        // Verify the payout address was updated to the new owner
+        assertEq(builderCodes.payoutAddress(tokenId), to);
     }
 
     /// @notice Test that safeTransferFrom(from, to, tokenId, data) succeeds when the token owner has the transfer role
@@ -294,6 +300,9 @@ contract SafeTransferFromTest is BuilderCodesTest {
         assertEq(builderCodes.ownerOf(tokenId), to);
         assertEq(builderCodes.balanceOf(from), 0);
         assertEq(builderCodes.balanceOf(to), 1);
+
+        // Verify the payout address was updated to the new owner
+        assertEq(builderCodes.payoutAddress(tokenId), to);
     }
 
     /// @notice Test that safeTransferFrom(from, to, tokenId, data) succeeds when the approved address has the transfer
@@ -340,5 +349,8 @@ contract SafeTransferFromTest is BuilderCodesTest {
         assertEq(builderCodes.ownerOf(tokenId), to);
         assertEq(builderCodes.balanceOf(from), 0);
         assertEq(builderCodes.balanceOf(to), 1);
+
+        // Verify the payout address was updated to the new owner
+        assertEq(builderCodes.payoutAddress(tokenId), to);
     }
 }
