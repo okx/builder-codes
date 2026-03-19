@@ -50,27 +50,26 @@ contract PayoutAddressTest is BuilderCodesTest {
         string memory code = _generateValidCode(tokenId);
         uint256 validTokenId = builderCodes.toTokenId(code);
 
-        vm.expectRevert(abi.encodeWithSelector(BuilderCodes.Unregistered.selector, code));
+        vm.expectRevert(abi.encodeWithSelector(BuilderCodes.UnregisteredId.selector, validTokenId));
         builderCodes.payoutAddress(validTokenId);
     }
 
-    /// @notice Test that payoutAddress(uint256) reverts when token ID represents empty code
+    /// @notice Test that payoutAddress(uint256) reverts with UnregisteredId for empty token ID
     function test_payoutAddressUint256_revert_emptyCode() public {
         uint256 emptyTokenId = 0;
 
-        vm.expectRevert(abi.encodeWithSelector(BuilderCodes.InvalidCode.selector, ""));
+        vm.expectRevert(abi.encodeWithSelector(BuilderCodes.UnregisteredId.selector, emptyTokenId));
         builderCodes.payoutAddress(emptyTokenId);
     }
 
-    /// @notice Test that payoutAddress(uint256) reverts when token ID represents code with invalid characters
+    /// @notice Test that payoutAddress(uint256) reverts with UnregisteredId for invalid token ID
     ///
-    /// @param codeSeed The token ID representing invalid code
+    /// @param codeSeed The seed for generating an invalid code
     function test_payoutAddressUint256_revert_codeContainsInvalidCharacters(uint256 codeSeed) public {
-        // Use an invalid token ID that doesn't normalize properly
         string memory invalidCode = _generateInvalidCode(codeSeed);
         uint256 invalidTokenId = uint256(bytes32(bytes(invalidCode))) >> ((32 - bytes(invalidCode).length) * 8);
 
-        vm.expectRevert(abi.encodeWithSelector(BuilderCodes.InvalidCode.selector, invalidCode));
+        vm.expectRevert(abi.encodeWithSelector(BuilderCodes.UnregisteredId.selector, invalidTokenId));
         builderCodes.payoutAddress(invalidTokenId);
     }
 

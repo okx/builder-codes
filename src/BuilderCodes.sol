@@ -99,7 +99,7 @@ contract BuilderCodes is
     ////////////////////////////////////////////////////////////////
 
     /// @notice Emitted when the contract URI is updated (ERC-7572)
-    event ContractURIUpdated();
+    event ContractURIUpdated(string uriPrefix);
 
     /// @notice Thrown when call doesn't have required permissions
     error Unauthorized();
@@ -118,6 +118,9 @@ contract BuilderCodes is
 
     /// @notice Thrown when builder code is not registered
     error Unregistered(string code);
+
+    /// @notice Thrown when token ID is not registered
+    error UnregisteredId(uint256 tokenId);
 
     /// @notice Thrown when code generation fails after max attempts
     error CodeGenerationFailed();
@@ -246,6 +249,7 @@ contract BuilderCodes is
     function transferFrom(address from, address to, uint256 tokenId) public override(ERC721Upgradeable, IERC721) {
         _checkRole(TRANSFER_ROLE, msg.sender);
         super.transferFrom(from, to, tokenId);
+        _updatePayoutAddress(tokenId, to);
     }
 
     /// @notice Updates the metadata for a builder code
@@ -267,7 +271,7 @@ contract BuilderCodes is
     function updateBaseURI(string memory uriPrefix) external onlyRole(METADATA_ROLE) {
         _getRegistryStorage().uriPrefix = uriPrefix;
         emit BatchMetadataUpdate(0, type(uint256).max);
-        emit ContractURIUpdated();
+        emit ContractURIUpdated(uriPrefix);
     }
 
     /// @notice Updates the payout address for a builder code
@@ -303,7 +307,7 @@ contract BuilderCodes is
     ///
     /// @return payoutAddress The payout address
     function payoutAddress(uint256 tokenId) external view returns (address) {
-        if (_ownerOf(tokenId) == address(0)) revert Unregistered(toCode(tokenId));
+        if (_ownerOf(tokenId) == address(0)) revert UnregisteredId(tokenId);
         return _getRegistryStorage().payoutAddresses[tokenId];
     }
 

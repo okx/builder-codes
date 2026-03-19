@@ -87,14 +87,14 @@ contract BuilderCodesTransfersTest is BuilderCodesTest {
         assertEq(builderCodes.balanceOf(to), 1);
     }
 
-    /// @notice Test that transferred code preserves the payout address
+    /// @notice Test that transferred code updates the payout address to new owner
     ///
     /// @param codeSeed The seed for generating the code
     /// @param initialOwner The initial owner address
     /// @param payoutAddress The payout address
     /// @param secondOwner The second owner address
     /// @param newPayoutAddress The new payout address for testing updates
-    function test_transferedCodePreservesPayoutAddress(
+    function test_transferedCodeUpdatesPayoutAddress(
         uint256 codeSeed,
         address initialOwner,
         address payoutAddress,
@@ -125,11 +125,11 @@ contract BuilderCodesTransfersTest is BuilderCodesTest {
         vm.prank(initialOwner);
         builderCodes.transferFrom(initialOwner, secondOwner, tokenId);
 
-        // Verify ownership changed but payout address preserved
+        // Verify ownership changed and payout address updated to new owner
         assertEq(builderCodes.ownerOf(tokenId), secondOwner);
-        assertEq(builderCodes.payoutAddress(code), payoutAddress, "Payout address should be preserved after transfer");
+        assertEq(builderCodes.payoutAddress(code), secondOwner, "Payout address should update to new owner after transfer");
 
-        // Verify new owner can update payout address
+        // Verify new owner can still update payout address
         vm.prank(secondOwner);
         builderCodes.updatePayoutAddress(code, newPayoutAddress);
 
